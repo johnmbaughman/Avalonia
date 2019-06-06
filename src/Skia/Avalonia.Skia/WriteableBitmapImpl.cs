@@ -13,7 +13,7 @@ namespace Avalonia.Skia
     /// <summary>
     /// Skia based writeable bitmap.
     /// </summary>
-    public class WriteableBitmapImpl : IWriteableBitmapImpl, IDrawableBitmapImpl
+    internal class WriteableBitmapImpl : IWriteableBitmapImpl, IDrawableBitmapImpl
     {
         private static readonly SKBitmapReleaseDelegate s_releaseDelegate = ReleaseProc;
         private readonly SKBitmap _bitmap;
@@ -123,6 +123,7 @@ namespace Avalonia.Skia
             /// <summary>
             /// Create framebuffer from given bitmap.
             /// </summary>
+            /// <param name="parent">Parent bitmap impl.</param>
             /// <param name="bitmap">Bitmap.</param>
             public BitmapFramebuffer(WriteableBitmapImpl parent, SKBitmap bitmap)
             {

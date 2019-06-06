@@ -1,3 +1,6 @@
+// Copyright (c) The Avalonia Project. All rights reserved.
+// Licensed under the MIT license. See licence.md file in the project root for full license information.
+
 using System;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
@@ -10,8 +13,10 @@ using ReactiveUI;
 using DynamicData;
 using Xunit;
 using Splat;
+using Avalonia.Markup.Xaml;
+using Avalonia.ReactiveUI;
 
-namespace Avalonia 
+namespace Avalonia.ReactiveUI.UnitTests
 {
     public class AvaloniaActivationForViewFetcherTest
     {
@@ -70,12 +75,40 @@ namespace Avalonia
 
         public class ActivatableWindow : ReactiveWindow<ActivatableViewModel>
         {
-            public ActivatableWindow() => this.WhenActivated(disposables => { });
+            public ActivatableWindow()
+            {
+                InitializeComponent();
+                Assert.IsType<Border>(Content);
+                this.WhenActivated(disposables => { });
+            }
+
+            private void InitializeComponent()
+            {
+                var loader = new AvaloniaXamlLoader();
+                loader.Load(@"
+<Window xmlns='https://github.com/avaloniaui'>
+    <Border/>
+</Window>", null, this);
+            }
         }
 
         public class ActivatableUserControl : ReactiveUserControl<ActivatableViewModel>
         {
-            public ActivatableUserControl() => this.WhenActivated(disposables => { });
+            public ActivatableUserControl()
+            {
+                InitializeComponent();
+                Assert.IsType<Border>(Content);
+                this.WhenActivated(disposables => { });
+            }
+
+            private void InitializeComponent()
+            {
+                var loader = new AvaloniaXamlLoader();
+                loader.Load(@"
+<UserControl xmlns='https://github.com/avaloniaui'>
+    <Border/>
+</UserControl>", null, this);
+            }
         }
 
         public AvaloniaActivationForViewFetcherTest()

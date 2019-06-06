@@ -10,6 +10,7 @@ using Avalonia.Collections;
 using Avalonia.Controls.Generators;
 using Avalonia.Data;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
@@ -53,7 +54,8 @@ namespace Avalonia.Controls.Primitives
                 nameof(SelectedIndex),
                 o => o.SelectedIndex,
                 (o, v) => o.SelectedIndex = v,
-                unsetValue: -1);
+                unsetValue: -1,
+                defaultBindingMode: BindingMode.TwoWay);
 
         /// <summary>
         /// Defines the <see cref="SelectedItem"/> property.
@@ -99,7 +101,7 @@ namespace Avalonia.Controls.Primitives
                 "SelectionChanged",
                 RoutingStrategies.Bubble);
 
-        private static readonly IList Empty = new object[0];
+        private static readonly IList Empty = Array.Empty<object>();
 
         private int _selectedIndex = -1;
         private object _selectedItem;
@@ -324,14 +326,19 @@ namespace Avalonia.Controls.Primitives
 
             if (_updateCount == 0)
             {
+                var newIndex = -1;
+
                 if (SelectedIndex != -1)
                 {
-                    SelectedIndex = IndexOf((IEnumerable)e.NewValue, SelectedItem);
+                    newIndex = IndexOf((IEnumerable)e.NewValue, SelectedItem);
                 }
-                else if (AlwaysSelected && Items != null && Items.Cast<object>().Any())
+
+                if (AlwaysSelected && Items != null && Items.Cast<object>().Any())
                 {
-                    SelectedIndex = 0;
+                    newIndex = 0;
                 }
+
+                SelectedIndex = newIndex;
             }
         }
 
@@ -374,6 +381,7 @@ namespace Avalonia.Controls.Primitives
                     }
                     break;
 
+                case NotifyCollectionChangedAction.Move:
                 case NotifyCollectionChangedAction.Reset:
                     SelectedIndex = IndexOf(Items, SelectedItem);
                     break;
@@ -456,6 +464,23 @@ namespace Avalonia.Controls.Primitives
             if (--_updateCount == 0)
             {
                 UpdateFinished();
+            }
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (!e.Handled)
+            {
+                var keymap = AvaloniaLocator.Current.GetService<PlatformHotkeyConfiguration>();
+                bool Match(List<KeyGesture> gestures) => gestures.Any(g => g.Matches(e));
+
+                if (this.SelectionMode == SelectionMode.Multiple && Match(keymap.SelectAll))
+                {
+                    SynchronizeItems(SelectedItems, Items?.Cast<object>());
+                    e.Handled = true;
+                }
             }
         }
 
@@ -615,6 +640,38 @@ namespace Avalonia.Controls.Primitives
         }
 
         /// <summary>
+        /// Makes a list of objects equal another.
+        /// </summary>
+        /// <param name="items">The items collection.</param>
+        /// <param name="desired">The desired items.</param>
+        internal static void SynchronizeItems(IList items, IEnumerable<object> desired)
+        {
+            var index = 0;
+
+            foreach (object item in desired)
+            {
+                int itemIndex = items.IndexOf(item);
+
+                if (itemIndex == -1)
+                {
+                    items.Insert(index, item);
+                }
+                else if(itemIndex != index)
+                {
+                    items.RemoveAt(itemIndex);
+                    items.Insert(index, item);
+                }
+
+                ++index;
+            }
+
+            while (index < items.Count)
+            {
+                items.RemoveAt(items.Count - 1);
+            }
+        }
+
+        /// <summary>
         /// Gets a range of items from an IEnumerable.
         /// </summary>
         /// <param name="items">The items.</param>
@@ -632,38 +689,6 @@ namespace Avalonia.Controls.Primitives
             }
 
             yield return list[last];
-        }
-
-        /// <summary>
-        /// Makes a list of objects equal another.
-        /// </summary>
-        /// <param name="items">The items collection.</param>
-        /// <param name="desired">The desired items.</param>
-        private static void SynchronizeItems(IList items, IEnumerable<object> desired)
-        {
-            int index = 0;
-
-            foreach (var i in desired)
-            {
-                if (index < items.Count)
-                {
-                    if (items[index] != i)
-                    {
-                        items[index] = i;
-                    }
-                }
-                else
-                {
-                    items.Add(i);
-                }
-
-                ++index;
-            }
-
-            while (index < items.Count)
-            {
-                items.RemoveAt(items.Count - 1);
-            }
         }
 
         /// <summary>

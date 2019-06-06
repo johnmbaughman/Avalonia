@@ -11,6 +11,7 @@ using Avalonia.Controls.Templates;
 
 namespace Avalonia.Markup.Xaml
 {
+    using System.Reflection;
     using Avalonia.Media;
 
     /// <summary>
@@ -29,6 +30,7 @@ namespace Avalonia.Markup.Xaml
     /// </remarks>
     public static class AvaloniaTypeConverters
     {
+        // When adding item to that list make sure to modify AvaloniaXamlIlLanguage
         private static Dictionary<Type, Type> _converters = new Dictionary<Type, Type>()
         {
             { typeof(AvaloniaList<>), typeof(AvaloniaListConverter<>) },
@@ -41,8 +43,15 @@ namespace Avalonia.Markup.Xaml
             { typeof(WindowIcon), typeof(IconTypeConverter) },
             { typeof(CultureInfo), typeof(CultureInfoConverter) },
             { typeof(Uri), typeof(AvaloniaUriTypeConverter) },
-            { typeof(FontFamily), typeof(FontFamilyTypeConverter) }
+            { typeof(FontFamily), typeof(FontFamilyTypeConverter) },
+            { typeof(EventInfo), typeof(AvaloniaEventConverter) },
         };
+
+        internal static Type GetBuiltinTypeConverter(Type type)
+        {
+            _converters.TryGetValue(type, out var result);
+            return result;
+        }
 
         /// <summary>
         /// Tries to lookup a <see cref="TypeConverter"/> for a type.
@@ -51,6 +60,14 @@ namespace Avalonia.Markup.Xaml
         /// <returns>The type converter.</returns>
         public static Type GetTypeConverter(Type type)
         {
+            if (type.IsConstructedGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                var inner = GetTypeConverter(type.GetGenericArguments()[0]);
+                if (inner == null)
+                    return null;
+                return typeof(NullableTypeConverter<>).MakeGenericType(inner);
+            }
+            
             if (_converters.TryGetValue(type, out var result))
             {
                 return result;
